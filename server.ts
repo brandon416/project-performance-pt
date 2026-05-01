@@ -8,7 +8,7 @@ import fs from "fs";
 
 import { env } from "./src/lib/env.ts";
 import openrouter, { MODELS, analyzeExerciseMedia, streamChat, generateExerciseCues } from "./src/lib/openrouter.ts";
-import { createOAuth2Client, getSheetInbox, updateSheetRow, getCalendarEvents } from "./src/lib/google-apis.ts";
+import { createOAuth2Client, getSheetInbox, updateSheetRow, getCalendarEvents, listDriveFolder } from "./src/lib/google-apis.ts";
 import { truecoachService } from "./src/lib/truecoach.ts";
 import { acuityService } from "./src/lib/acuity.ts";
 
@@ -205,6 +205,22 @@ app.post("/api/automation/analyze-media", upload.single("media"), async (req, re
       exercise_cues: analysis.exercise_cues,
       sets_reps: analysis.sets_reps,
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Drive (Exercise Demo Folder) ─────────────────────────────────────────
+app.post("/api/drive/exercise-folder", async (req, res) => {
+  try {
+    const { config } = req.body;
+    const tokens = config?.googleTokens;
+    if (!tokens) return res.status(401).json({ error: "No Google tokens" });
+
+    // Default folder: "02 Exercise demo" — user can override via config.driveFolderId
+    const folderId = config?.driveFolderId ?? "root";
+    const files = await listDriveFolder(tokens, folderId);
+    res.json({ files });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
